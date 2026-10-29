@@ -33,7 +33,7 @@ class BigButton extends StatelessWidget {
           backgroundColor: filled ? colorScheme.primary : colorScheme.secondaryContainerIfDark,
           foregroundColor: filled ? colorScheme.onPrimary : colorScheme.onSecondaryContainerIfDark,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.only(left: 2, right: 2, top: 10, bottom: 8),
         ),

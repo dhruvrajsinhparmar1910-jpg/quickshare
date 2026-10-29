@@ -8,7 +8,10 @@ import 'package:localsend_app/util/ui/dynamic_colors.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:yaru/yaru.dart' as yaru;
 
-final _borderRadius = BorderRadius.circular(5);
+/// QuickShare brand color (indigo).
+const brandColor = Color(0xFF4F46E5);
+
+final _borderRadius = BorderRadius.circular(12);
 
 ThemeData getTheme(ColorMode colorMode, Color customColor, Brightness brightness, DynamicColors? dynamicColors) {
   if (colorMode == ColorMode.yaru) {
@@ -16,16 +19,6 @@ ThemeData getTheme(ColorMode colorMode, Color customColor, Brightness brightness
   }
 
   final colorScheme = _determineColorScheme(colorMode, customColor, brightness, dynamicColors);
-
-  final lightInputBorder = OutlineInputBorder(
-    borderSide: BorderSide(color: colorScheme.secondaryContainer),
-    borderRadius: _borderRadius,
-  );
-
-  final darkInputBorder = OutlineInputBorder(
-    borderSide: BorderSide(color: colorScheme.secondaryContainer),
-    borderRadius: _borderRadius,
-  );
 
   // https://github.com/localsend/localsend/issues/52
   final String? fontFamily;
@@ -49,36 +42,119 @@ ThemeData getTheme(ColorMode colorMode, Color customColor, Brightness brightness
     fontFamily = null;
   }
 
-  return ThemeData(
-    colorScheme: colorScheme,
-    useMaterial3: true,
+  return _applyMinimalStyle(
+    ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      fontFamily: fontFamily,
+    ),
+  );
+}
+
+/// Flat, low-contrast component styling shared by all color modes.
+ThemeData _applyMinimalStyle(ThemeData base) {
+  final colorScheme = base.colorScheme;
+  final shape = RoundedRectangleBorder(borderRadius: _borderRadius);
+  final inputBorder = OutlineInputBorder(
+    borderSide: BorderSide.none,
+    borderRadius: _borderRadius,
+  );
+  final buttonPadding = const EdgeInsets.symmetric(horizontal: 20, vertical: 12);
+
+  return base.copyWith(
     // same density on all platforms so desktop matches mobile (defaults to compact on desktop)
     visualDensity: VisualDensity.standard,
-    navigationBarTheme: colorScheme.brightness == Brightness.dark
-        ? NavigationBarThemeData(
-            iconTheme: WidgetStateProperty.all(const IconThemeData(color: Colors.white)),
-          )
-        : null,
-    inputDecorationTheme: InputDecorationTheme(
+    scaffoldBackgroundColor: colorScheme.surface,
+    cardColor: colorScheme.surfaceContainerLow,
+    appBarTheme: AppBarThemeData(
+      backgroundColor: colorScheme.surface,
+      foregroundColor: colorScheme.onSurface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+      centerTitle: false,
+      titleTextStyle: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+    ),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      color: colorScheme.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      elevation: 0,
+      backgroundColor: colorScheme.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      elevation: 0,
+      backgroundColor: colorScheme.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      elevation: 0,
+      height: 68,
+      backgroundColor: colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: colorScheme.primaryContainer,
+      indicatorShape: shape,
+      labelTextStyle: WidgetStateProperty.all(base.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500)),
+    ),
+    navigationRailTheme: NavigationRailThemeData(
+      elevation: 0,
+      backgroundColor: colorScheme.surface,
+      indicatorColor: colorScheme.primaryContainer,
+      indicatorShape: shape,
+    ),
+    dividerTheme: DividerThemeData(
+      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+      thickness: 1,
+      space: 1,
+    ),
+    listTileTheme: ListTileThemeData(shape: shape),
+    popupMenuTheme: PopupMenuThemeData(
+      elevation: 2,
+      surfaceTintColor: Colors.transparent,
+      shape: shape,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: shape,
+    ),
+    inputDecorationTheme: InputDecorationThemeData(
       filled: true,
-      fillColor: colorScheme.secondaryContainer,
-      border: colorScheme.brightness == Brightness.light ? lightInputBorder : darkInputBorder,
-      focusedBorder: colorScheme.brightness == Brightness.light ? lightInputBorder : darkInputBorder,
-      enabledBorder: colorScheme.brightness == Brightness.light ? lightInputBorder : darkInputBorder,
-      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+      fillColor: colorScheme.surfaceContainerHighest,
+      border: inputBorder,
+      focusedBorder: inputBorder.copyWith(borderSide: BorderSide(color: colorScheme.primary, width: 1.5)),
+      enabledBorder: inputBorder,
+      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        foregroundColor: colorScheme.brightness == Brightness.dark ? Colors.white : null,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: 0,
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        foregroundColor: colorScheme.onSurface,
+        shape: shape,
+        padding: buttonPadding,
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(shape: shape, padding: buttonPadding),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        shape: shape,
+        padding: buttonPadding,
+        side: BorderSide(color: colorScheme.outlineVariant),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
+      style: TextButton.styleFrom(shape: shape, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
     ),
-    fontFamily: fontFamily,
   );
 }
 
@@ -142,7 +218,7 @@ extension InputDecorationThemeExt on InputDecorationThemeData {
 
 ColorScheme _determineColorScheme(ColorMode mode, Color customColor, Brightness brightness, DynamicColors? dynamicColors) {
   final defaultColorScheme = ColorScheme.fromSeed(
-    seedColor: Colors.teal,
+    seedColor: brandColor,
     brightness: brightness,
   );
 
@@ -164,46 +240,5 @@ ColorScheme _determineColorScheme(ColorMode mode, Color customColor, Brightness 
 
 ThemeData _getYaruTheme(Brightness brightness) {
   final baseTheme = brightness == Brightness.light ? yaru.yaruLight : yaru.yaruDark;
-  final colorScheme = baseTheme.colorScheme;
-
-  final lightInputBorder = OutlineInputBorder(
-    borderSide: BorderSide(color: colorScheme.secondaryContainer),
-    borderRadius: _borderRadius,
-  );
-
-  final darkInputBorder = OutlineInputBorder(
-    borderSide: BorderSide(color: colorScheme.secondaryContainer),
-    borderRadius: _borderRadius,
-  );
-
-  InputDecorationThemeData;
-
-  return baseTheme.copyWith(
-    // same density on all platforms so desktop matches mobile (defaults to compact on desktop)
-    visualDensity: VisualDensity.standard,
-    navigationBarTheme: colorScheme.brightness == Brightness.dark
-        ? NavigationBarThemeData(
-            iconTheme: WidgetStateProperty.all(const IconThemeData(color: Colors.white)),
-          )
-        : null,
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: colorScheme.secondaryContainer,
-      border: colorScheme.brightness == Brightness.light ? lightInputBorder : darkInputBorder,
-      focusedBorder: colorScheme.brightness == Brightness.light ? lightInputBorder : darkInputBorder,
-      enabledBorder: colorScheme.brightness == Brightness.light ? lightInputBorder : darkInputBorder,
-      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        foregroundColor: colorScheme.brightness == Brightness.dark ? Colors.white : null,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
-    ),
-  );
+  return _applyMinimalStyle(baseTheme);
 }

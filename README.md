@@ -1,4 +1,14 @@
-# LocalSend
+# QuickShare
+
+> QuickShare is a rebranded fork of [LocalSend](https://github.com/localsend/localsend) with a minimal UI.
+> It speaks the LocalSend protocol, so it can exchange files with regular LocalSend devices.
+>
+> **Builds:** push a `v*` tag (or run *QuickShare Release* manually in the Actions tab) to build an unsigned
+> Windows installer/portable zip and debug-signed Android APKs; they are attached to a GitHub Release.
+
+---
+
+# LocalSend (upstream)
 
 [![CI status][ci-badge]][ci-workflow]
 [![Translations][translate-badge]][translate-link]
