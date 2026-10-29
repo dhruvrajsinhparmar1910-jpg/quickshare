@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "org.localsend.localsend_app"
+        applicationId "org.quickshare.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
         minSdkVersion flutter.minSdkVersion
@@ -67,7 +67,8 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            // Without key.properties (e.g. CI without secrets) fall back to the debug key
+            signingConfig rootProject.file('key.properties').exists() ? signingConfigs.release : signingConfigs.debug
         }
         debug {
             applicationIdSuffix ".debug"

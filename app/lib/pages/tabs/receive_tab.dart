@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:localsend_app/gen/strings.g.dart';
 import 'package:localsend_app/model/state/server/server_state.dart';
@@ -13,7 +15,6 @@ import 'package:localsend_app/util/ip_helper.dart';
 import 'package:localsend_app/widget/animations/initial_fade_transition.dart';
 import 'package:localsend_app/widget/column_list_view.dart';
 import 'package:localsend_app/widget/custom_icon_button.dart';
-import 'package:localsend_app/widget/local_send_logo.dart';
 import 'package:localsend_app/widget/responsive_list_view.dart';
 import 'package:localsend_app/widget/rotating_widget.dart';
 import 'package:localsend_isolates/util/sleep.dart';
@@ -78,24 +79,36 @@ class _ReceiveTabState extends State<ReceiveTab> {
                             builder: (context, ref) {
                               final animations = ref.watch(animationProvider);
                               final activeTab = ref.watch(homePageControllerProvider.select((state) => state.currentTab));
-                              return RotatingWidget(
-                                duration: const Duration(seconds: 15),
-                                spinning: serverState != null && animations && activeTab == HomeTab.receive,
-                                child: const LocalSendLogo(withText: false),
+                              return SizedBox.square(
+                                dimension: 200,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    RotatingWidget(
+                                      duration: const Duration(seconds: 15),
+                                      spinning: serverState != null && animations && activeTab == HomeTab.receive,
+                                      child: const _DashedRing(),
+                                    ),
+                                    Icon(Icons.bolt_rounded, size: 96, color: Theme.of(context).colorScheme.primary),
+                                  ],
+                                ),
                               );
                             },
                           ),
                         ),
                         FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text(serverState?.alias ?? alias, style: const TextStyle(fontSize: 48)),
+                          child: Text(
+                            serverState?.alias ?? alias,
+                            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+                          ),
                         ),
                         InitialFadeTransition(
                           duration: const Duration(milliseconds: 300),
                           delay: const Duration(milliseconds: 500),
                           child: Text(
                             serverState == null ? t.general.offline : localIps.map((ip) => '#${ip.visualId}').toSet().join(' '),
-                            style: const TextStyle(fontSize: 24),
+                            style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -247,4 +260,44 @@ class _InfoBox extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Dashed ring around the bolt icon, spins while the server is running.
+class _DashedRing extends StatelessWidget {
+  const _DashedRing();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size.square(200),
+      painter: _DashedRingPainter(Theme.of(context).colorScheme.primary),
+    );
+  }
+}
+
+class _DashedRingPainter extends CustomPainter {
+  static const _dashes = 8;
+  static const _gap = 0.35; // in radians
+
+  final Color color;
+
+  _DashedRingPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const strokeWidth = 8.0;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: size.shortestSide / 2 - strokeWidth);
+    const sweep = 2 * math.pi / _dashes;
+    for (var i = 0; i < _dashes; i++) {
+      canvas.drawArc(rect, i * sweep + _gap / 2, sweep - _gap, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRingPainter oldDelegate) => oldDelegate.color != color;
 }

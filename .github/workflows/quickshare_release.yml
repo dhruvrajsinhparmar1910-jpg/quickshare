@@ -1,0 +1,170 @@
+name: QuickShare Release
+
+# Builds an unsigned Windows installer and debug-signed Android APKs, then uploads them to a GitHub Release.
+# Push a tag like "v1.18.2" or run it manually (uses the version from app/pubspec.yaml).
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.41.9"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        run: |
+          VERSION=$(sed -n 's/^version: \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p' app/pubspec.yaml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+
+    steps:
+      - name: Fix long file paths
+        run: git config --system core.longpaths true
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+
+      # Required by the CMake install step (app/windows/CMakeLists.txt installs localsend_msix_helper.msix)
+      - name: Build MSIX helper
+        run: |
+          $makepri = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\10.*\x64\makepri.exe' | Select-Object -Last 1
+          & $makepri.FullName new /pr support\build\msix\content /cf support\build\msix\priconfig.xml /mn support\build\msix\content\AppxManifest.xml /of support\build\msix\content\resources.pri /o
+          & 'C:\Program Files (x86)\Windows Kits\10\App Certification Kit\makeappx.exe' pack /o /d support\build\msix\content /nv /p app\windows\localsend_msix_helper.msix
+
+      - name: Dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Compile for Windows
+        working-directory: app
+        run: flutter build windows
+
+      - name: Prepare Inno Setup payload
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ runner.temp }}\inno" | Out-Null
+          Copy-Item -Path "app\build\windows\x64\runner\Release\*" -Destination "${{ runner.temp }}\inno" -Recurse
+          Copy-Item -Path "app\assets\packaging\logo.ico" -Destination "${{ runner.temp }}\inno"
+          Copy-Item -Path "support\build\windows\x64\*" -Destination "${{ runner.temp }}\inno" -Recurse
+          New-Item -ItemType Directory -Force -Path "${{ runner.temp }}\dist" | Out-Null
+
+      # SkipMsixHelper: the helper would be unsigned and Add-AppxPackage rejects unsigned packages
+      - name: Compile installer (unsigned)
+        run: iscc /DSkipSignTool /DSkipMsixHelper "/DPayloadDir=${{ runner.temp }}\inno" "/DResultDir=${{ runner.temp }}\dist" support\scripts\compile_windows_exe-inno.iss
+
+      - name: Rename installer
+        run: Rename-Item -Path "${{ runner.temp }}\dist\quickshare.exe" -NewName "QuickShare-${{ needs.version.outputs.version }}-windows-x86-64-setup.exe"
+
+      - name: Portable zip
+        run: Compress-Archive -Path "app\build\windows\x64\runner\Release\*" -DestinationPath "${{ runner.temp }}\dist\QuickShare-${{ needs.version.outputs.version }}-windows-x86-64-portable.zip"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows
+          path: ${{ runner.temp }}\dist\*
+          if-no-files-found: error
+
+  android:
+    needs: version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Remove proprietary dependencies
+        run: sh support/scripts/remove_proprietary_dependencies.sh
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check rust-toolchain.toml
+        working-directory: packages/localsend_isolates
+        run: rustup show
+
+      - name: Dependencies
+        working-directory: app
+        run: flutter pub get
+
+      # No key.properties here, so build.gradle signs the release build with the debug key
+      - name: Build APKs
+        working-directory: app
+        run: |
+          flutter build apk --split-per-abi
+          flutter build apk
+
+      - name: Rename APKs
+        run: |
+          V=${{ needs.version.outputs.version }}
+          OUT=app/build/app/outputs/flutter-apk
+          mkdir -p dist
+          cp $OUT/app-release.apk dist/QuickShare-$V-android-universal.apk
+          cp $OUT/app-arm64-v8a-release.apk dist/QuickShare-$V-android-arm64-v8a.apk
+          cp $OUT/app-armeabi-v7a-release.apk dist/QuickShare-$V-android-armeabi-v7a.apk
+          cp $OUT/app-x86_64-release.apk dist/QuickShare-$V-android-x86_64.apk
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: [version, windows, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: QuickShare ${{ needs.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Unsigned Windows installer / portable zip and debug-signed Android APKs.
+            Windows SmartScreen may warn on first start ("More info" → "Run anyway").
+            Most Android phones: use the arm64-v8a APK (or universal).
+          files: dist/*
+          fail_on_unmatched_files: true

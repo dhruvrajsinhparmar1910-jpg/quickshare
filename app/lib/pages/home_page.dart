@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:localsend_app/config/init.dart';
-import 'package:localsend_app/config/theme.dart';
 import 'package:localsend_app/gen/strings.g.dart';
 import 'package:localsend_app/pages/home_page_controller.dart';
 import 'package:localsend_app/pages/tabs/receive_tab.dart';
@@ -113,18 +112,19 @@ class _HomePageState extends State<HomePage> with Refena {
                     selectedIndex: vm.currentTab.index,
                     onDestinationSelected: (index) => vm.changeTab(HomeTab.values[index]),
                     extended: sizingInformation.isDesktop,
-                    backgroundColor: Theme.of(context).cardColorWithElevation,
                     leading: sizingInformation.isDesktop
-                        ? const Column(
-                            children: [
-                              SizedBox(height: 20),
-                              Text(
-                                'LocalSend',
-                                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: 20),
-                            ],
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Row(
+                              children: [
+                                Icon(Icons.bolt_rounded, size: 28, color: Theme.of(context).colorScheme.primary),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'QuickShare',
+                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                                ),
+                              ],
+                            ),
                           )
                         : null,
                     destinations: HomeTab.values.map((tab) {
@@ -134,6 +134,7 @@ class _HomePageState extends State<HomePage> with Refena {
                       );
                     }).toList(),
                   ),
+                if (!sizingInformation.isMobile) const VerticalDivider(),
                 Expanded(
                   child: SafeArea(
                     left: sizingInformation.isMobile,
